@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NotifyStream</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; }
+
+    /* Page switching */
+    .page { display: none; }
+    .page.active { display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* Nav active */
+    .nav-btn.active { color: #ffffff; background: rgba(255,255,255,0.08); }
+    .nav-btn:not(.active):hover { background: rgba(255,255,255,0.05); color: #d1d5db; }
+    .nav-btn { transition: all 0.15s; }
+
+    /* Sparkline animation */
+    .sparkpath { stroke-dasharray: 400; stroke-dashoffset: 400; animation: dash 2s ease forwards; }
+    @keyframes dash { to { stroke-dashoffset: 0; } }
+
+    /* Pulse */
+    @keyframes livepulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .livepulse { animation: livepulse 1.8s ease-in-out infinite; }
+
+    /* Fade in */
+    @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+    .fade-in { animation: fadeIn 0.3s ease forwards; }
+
+    /* Toggle */
+    .tog-input:checked + .tog-track { background: #f59e0b; }
+    .tog-input:checked + .tog-track .tog-thumb { transform: translateX(18px); }
+    .tog-track { transition: background 0.2s; }
+    .tog-thumb { transition: transform 0.2s; }
+
+    /* Row hover */
+    .trow:hover { background: #f5f5f5; }
+    .trow { transition: background 0.12s; }
+
+    /* Channel card hover */
+    .ch-card:hover { border-color: #3b82f6; }
+    .ch-card { transition: border-color 0.2s; }
+
+    /* Template card hover */
+    .tmpl:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-color: #6366f1; }
+    .tmpl { transition: all 0.2s; }
+
+    /* Log row hover */
+    .lrow:hover { background: #fafafa; }
+    .lrow { transition: background 0.12s; }
+
+    /* Sub row hover */
+    .srow:hover { background: #ececec; }
+    .srow { transition: background 0.12s; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+  </style>
+</head>
+<body class="bg-gray-100 flex">
+
+<!-- ═══════════════════════ SIDEBAR ═══════════════════════ -->
+<aside class="w-52 bg-gray-900 min-h-screen fixed top-0 left-0 z-30 flex flex-col">
+  <!-- Logo -->
+  <div class="px-5 pt-6 pb-5 border-b border-gray-700">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center font-bold text-white text-base">N</div>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="flex-1 px-3 py-5 space-y-1">
+    <button onclick="showPage('overview')" data-page="overview" class="nav-btn active w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-400 text-left">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Over view
+    </button>
+    <button onclick="showPage('channels')" data-page="channels" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-400 text-left">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.09 9.82 19.79 19.79 0 01.1 4.46 2 2 0 012.08 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 9.91a16 16 0 006.72 6.72l1.06-1.06a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+      Channels
+    </button>
+    <button onclick="showPage('logs')" data-page="logs" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-400 text-left">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Logs
+    </button>
+    <button onclick="showPage('templates')" data-page="templates" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-400 text-left">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      Tamplates
+    </button>
+    <button onclick="showPage('subscribers')" data-page="subscribers" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-400 text-left">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Subscribers
+    </button>
+  </nav>
+
+  <!-- Settings -->
+  <div class="px-3 pb-5 border-t border-gray-700 pt-4">
+    <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-500 text-left">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg>
+      Settings
+    </button>
+  </div>
+</aside>
+
+<!-- ═══════════════════════ MAIN CONTENT ═══════════════════════ -->
+<main class="ml-52 flex-1">
+
+<!-- ══════════════════════════════════════════════
+     PAGE 1: OVERVIEW
+══════════════════════════════════════════════ -->
+<div id="page-overview" class="page active bg-white fade-in">
+
+  <!-- Header -->
+  <div class="border-b border-gray-200 px-10 py-6">
+    <h1 class="text-2xl font-bold text-gray-900 tracking-tight text-center">LIVE NOTIFICATION STREAM</h1>
+  </div>
+
+  <div class="p-8 flex gap-6">
+    <!-- Left: Table + Analytics -->
+    <div class="flex-1 space-y-8">
+
+      <!-- Notification Table -->
+      <div class="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-200 bg-gray-100">
+              <th class="text-left px-5 py-3 text-xs font-semibold text-gray-600">Status</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-gray-600">Reciepient</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-gray-600">Emails</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-gray-600">Messages</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-gray-600">Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Sent -->
+            <tr class="trow border-b border-gray-100">
+              <td class="px-5 py-5">
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5 text-white bg-emerald-500 rounded-full p-0.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span class="text-sm text-gray-800">Send</span>
+                </div>
+              </td>
+              <td class="px-5 py-5 text-gray-700">qwerty12@gmail.com</td>
+              <td class="px-5 py-5 text-gray-700">email</td>
+              <td class="px-5 py-5 text-gray-700">Your password is changed</td>
+              <td class="px-5 py-5 text-gray-600 text-sm">10 min</td>
+            </tr>
+            <!-- Pending -->
+            <tr class="trow border-b border-gray-100">
+              <td class="px-5 py-6">
+                <div class="flex items-center gap-2">
+                  <div class="w-5 h-5 bg-amber-400 rounded-full flex items-center justify-center text-white text-xs font-bold">⏳</div>
+                  <span class="text-sm text-gray-800">Pending</span>
+                </div>
+              </td>
+              <td class="px-5 py-6 text-gray-700">0782552316</td>
+              <td class="px-5 py-6 text-gray-700">SMS</td>
+              <td class="px-5 py-6 text-gray-400">—</td>
+              <td class="px-5 py-6 text-gray-600 text-sm">5 min</td>
+            </tr>
+            <!-- Failed -->
+            <tr class="trow border-b border-gray-100">
+              <td class="px-5 py-4">
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5 text-white bg-orange-500 rounded-full p-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                  <span class="text-sm text-gray-800">Failed</span>
+                </div>
+              </td>
+              <td class="px-5 py-4 text-gray-700">Your OTP is 12345</td>
+              <td class="px-5 py-4 text-gray-700">Slack</td>
+              <td class="px-5 py-4 text-gray-400">—</td>
+              <td class="px-5 py-4 text-gray-600 text-sm">10 sec</td>
+            </tr>
+            <!-- Server -->
+            <tr class="trow">
+              <td class="px-5 py-4">
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5 text-white bg-red-500 rounded-full p-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                  <span class="text-sm text-gray-800">Server</span>
+                </div>
+              </td>
+              <td class="px-5 py-4 text-gray-700">Critical server error: 500</td>
+              <td class="px-5 py-4 text-gray-400">—</td>
+              <td class="px-5 py-4 text-gray-400">—</td>
+              <td class="px-5 py-4 text-gray-600 text-sm">50 min</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Analytics Section -->
+      <div>
+        <p class="text-sm font-semibold text-gray-700 mb-4">Analytic section</p>
+        <div class="flex items-end gap-8">
+          <!-- Big number -->
+          <div>
+            <div class="text-7xl font-bold text-emerald-400 leading-none">98.5%</div>
+            <p class="text-sm font-semibold text-gray-700 mt-3">Delivery Success rate</p>
+          </div>
+          <!-- Charts -->
+          <div class="flex gap-5">
+            <div class="text-center">
+              <div class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                <svg width="130" height="60" viewBox="0 0 130 60">
+                  <polyline class="sparkpath" points="5,50 20,38 35,45 50,22 65,30 80,12 100,20 125,8" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="125" cy="8" r="3" fill="#34d399"/>
+                  <circle cx="50" cy="22" r="2" fill="#34d399" opacity="0.5"/>
+                  <circle cx="80" cy="12" r="2" fill="#34d399" opacity="0.5"/>
+                </svg>
+              </div>
+              <p class="text-xs text-gray-500 mt-2 font-medium">Notification Spikes</p>
+            </div>
+            <div class="text-center">
+              <div class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                <svg width="130" height="60" viewBox="0 0 130 60">
+                  <polyline class="sparkpath" style="animation-delay:0.5s" points="5,30 25,30 25,45 50,45 50,18 75,18 75,38 100,38 100,22 125,22" fill="none" stroke="#67e8f9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="125" cy="22" r="3" fill="#67e8f9"/>
+                </svg>
+              </div>
+              <p class="text-xs text-gray-500 mt-2 font-medium">Notification Status</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Quick Send -->
+    <div class="w-52 shrink-0">
+      <div class="bg-gray-100 border border-gray-200 rounded-xl p-5 space-y-4">
+        <h3 class="font-bold text-gray-900 text-center text-base">Quick send</h3>
+        <button class="w-full text-center text-sm text-gray-600 py-2 hover:text-gray-900 transition-colors border-b border-gray-300">Select template</button>
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-gray-700 font-medium">Send as high priority</span>
+          <label class="relative cursor-pointer flex items-center">
+            <input type="checkbox" checked class="tog-input sr-only peer">
+            <div class="tog-track w-10 h-5 bg-gray-300 peer-checked:bg-amber-400 rounded-full relative flex items-center px-0.5">
+              <div class="tog-thumb w-4 h-4 bg-white rounded-full shadow"></div>
+            </div>
+          </label>
+        </div>
+        <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm py-2.5 rounded-lg transition-colors">Send test notification</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE 2: CHANNELS
+══════════════════════════════════════════════ -->
+<div id="page-channels" class="page bg-white fade-in">
+  <!-- Header -->
+  <div class="border-b border-gray-200 px-10 py-6 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900 tracking-tight">CHANNELS</h1>
+    <button class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">+ Add Channel</button>
+  </div>
+
+  <div class="p-8 space-y-5">
+    <!-- Status pills -->
+    <div class="grid grid-cols-4 gap-3">
+      <div class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 text-base">✉</div>
+        <div><div class="text-xs text-gray-400">Email</div><div class="text-sm font-bold text-emerald-600">● Active</div></div>
+      </div>
+      <div class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 text-base">💬</div>
+        <div><div class="text-xs text-gray-400">SMS</div><div class="text-sm font-bold text-emerald-600">● Active</div></div>
+      </div>
+      <div class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">#</div>
+        <div><div class="text-xs text-gray-400">Slack</div><div class="text-sm font-bold text-emerald-600">● Active</div></div>
+      </div>
+      <div class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center text-orange-500 text-base">🔔</div>
+        <div><div class="text-xs text-gray-400">Push</div><div class="text-sm font-bold text-gray-400">○ Inactive</div></div>
+      </div>
+    </div>
+
+    <!-- Email config -->
+    <div class="ch-card border border-gray-200 rounded-xl p-6 bg-gray-50">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-xl">✉</div>
+          <div>
+            <div class="font-bold text-gray-900">Email — SMTP (SendGrid)</div>
+            <div class="text-xs text-gray-400 mt-0.5">smtp.sendgrid.net · Port 587</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-emerald-600 bg-emerald-100 px-2.5 py-1 rounded-full font-medium">● Connected</span>
+          <label class="relative cursor-pointer">
+            <input type="checkbox" checked class="tog-input sr-only peer">
+            <div class="tog-track w-10 h-5 bg-gray-300 peer-checked:bg-emerald-500 rounded-full relative flex items-center px-0.5">
+              <div class="tog-thumb w-4 h-4 bg-white rounded-full shadow"></div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs text-gray-500 block mb-1">SMTP Host</label><input value="smtp.sendgrid.net" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"/></div>
+        <div><label class="text-xs text-gray-500 block mb-1">Port</label><input value="587" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"/></div>
+        <div><label class="text-xs text-gray-500 block mb-1">API Key</label><input type="password" value="SG.xxxxxxxxxx" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"/></div>
+        <div><label class="text-xs text-gray-500 block mb-1">From Address</label><input value="noreply@notify.io" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"/></div>
+      </div>
+      <div class="flex gap-2 mt-3">
+        <button class="text-xs border border-gray-300 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors">Test Connection</button>
+        <button class="text-xs bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors font-semibold">Save</button>
+      </div>
+    </div>
+
+    <!-- SMS config -->
+    <div class="ch-card border border-gray-200 rounded-xl p-6 bg-gray-50">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-xl">💬</div>
+          <div>
+            <div class="font-bold text-gray-900">SMS — Twilio</div>
+            <div class="text-xs text-gray-400 mt-0.5">+1 (555) 010-1234</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-emerald-600 bg-emerald-100 px-2.5 py-1 rounded-full font-medium">● Connected</span>
+          <label class="relative cursor-pointer">
+            <input type="checkbox" checked class="tog-input sr-only peer">
+            <div class="tog-track w-10 h-5 bg-gray-300 peer-checked:bg-emerald-500 rounded-full relative flex items-center px-0.5">
+              <div class="tog-thumb w-4 h-4 bg-white rounded-full shadow"></div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs text-gray-500 block mb-1">Account SID</label><input value="AC4f2cxxxxxxxx" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"/></div>
+        <div><label class="text-xs text-gray-500 block mb-1">Auth Token</label><input type="password" value="••••••••••••" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"/></div>
+      </div>
+      <div class="flex gap-2 mt-3">
+        <button class="text-xs border border-gray-300 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors">Test Connection</button>
+        <button class="text-xs bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors font-semibold">Save</button>
+      </div>
+    </div>
+
+    <!-- Slack config -->
+    <div class="ch-card border border-gray-200 rounded-xl p-6 bg-gray-50">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-black text-xl">#</div>
+          <div>
+            <div class="font-bold text-gray-900">Slack</div>
+            <div class="text-xs text-gray-400 mt-0.5">Workspace: notify-team · #alerts</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-emerald-600 bg-emerald-100 px-2.5 py-1 rounded-full font-medium">● Connected</span>
+          <label class="relative cursor-pointer">
+            <input type="checkbox" checked class="tog-input sr-only peer">
+            <div class="tog-track w-10 h-5 bg-gray-300 peer-checked:bg-emerald-500 rounded-full relative flex items-center px-0.5">
+              <div class="tog-thumb w-4 h-4 bg-white rounded-full shadow"></div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div><label class="text-xs text-gray-500 block mb-1">Webhook URL</label><input value="https://hooks.slack.com/services/T000/B000/XXXX" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"/></div>
+      <div class="flex gap-2 mt-3">
+        <button class="text-xs border border-gray-300 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors">Test Connection</button>
+        <button class="text-xs bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors font-semibold">Save</button>
+      </div>
+    </div>
+
+    <!-- Push (disabled) -->
+    <div class="ch-card border border-dashed border-gray-300 rounded-xl p-6 bg-white opacity-60">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-xl">🔔</div>
+          <div>
+            <div class="font-bold text-gray-700">Push Notifications (Firebase)</div>
+            <div class="text-xs text-gray-400 mt-0.5">Not configured yet</div>
+          </div>
+        </div>
+        <button class="text-xs border border-dashed border-gray-400 text-gray-500 px-4 py-2 rounded-lg hover:border-indigo-400 hover:text-indigo-600 transition-colors">Configure →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE 3: LOGS
+══════════════════════════════════════════════ -->
+<div id="page-logs" class="page bg-white fade-in">
+  <div class="border-b border-gray-200 px-10 py-6 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900 tracking-tight">LOGS</h1>
+    <button class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export CSV
+    </button>
+  </div>
+
+  <div class="p-8 space-y-4">
+    <!-- Filters row -->
+    <div class="flex items-center gap-3 flex-wrap">
+      <div class="relative">
+        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="log-search" oninput="filterLogs()" placeholder="Search logs..." class="bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-4 py-2 text-sm text-gray-700 focus:outline-none focus:border-indigo-400 w-52 placeholder-gray-400"/>
+      </div>
+      <select id="log-status" onchange="filterLogs()" class="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none focus:border-indigo-400 cursor-pointer">
+        <option value="">All Statuses</option>
+        <option value="sent">Sent</option>
+        <option value="pending">Pending</option>
+        <option value="failed">Failed</option>
+        <option value="server">Server Error</option>
+      </select>
+      <select id="log-channel" onchange="filterLogs()" class="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none focus:border-indigo-400 cursor-pointer">
+        <option value="">All Channels</option>
+        <option value="email">Email</option>
+        <option value="sms">SMS</option>
+        <option value="slack">Slack</option>
+        <option value="push">Push</option>
+      </select>
+      <select class="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none focus:border-indigo-400 cursor-pointer">
+        <option>Last 24 hours</option><option>Last 7 days</option><option>Last 30 days</option>
+      </select>
+    </div>
+
+    <!-- Log table -->
+    <div class="border border-gray-200 rounded-xl overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-100 border-b border-gray-200">
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Time</th>
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Recipient</th>
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Channel</th>
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Template</th>
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Message ID</th>
+          </tr>
+        </thead>
+        <tbody id="log-body" class="divide-y divide-gray-100 bg-white">
+          <tr class="lrow log-entry" data-status="sent" data-channel="email" data-q="qwerty12 password reset email">
+            <td class="px-5 py-3.5 font-mono text-xs text-gray-400">2025-02-23 09:12</td>
+            <td class="px-5 py-3.5"><span class="bg-emerald-100 text-emerald-700 text-xs px-2.5 py-1 rounded-full font-medium">Sent</span></td>
+            <td class="px-5 py-3.5 text-gray-700">qwerty12@gmail.com</td>
+            <td class="px-5 py-3.5"><span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-md">Email</span></td>
+            <td class="px-5 py-3.5 text-gray-600">Password Reset</td>
+            <td class="px-5 py-3.5 font-mono text-xs text-gray-400">msg_a1b2c3</td>
+          </tr>
+          <tr class="lrow log-entry" data-status="pending" data-channel="sms" data-q="0782552316 otp sms">
+            <td class="px-5 py-3.5 font-mono text-xs text-gray-400">2025-02-23 09:10</td>
+            <td class="px-5 py-3.5"><span class="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-full font-medium">Pending</span></td>
+            <td class="px-5 py-3.5 text-gray-700">0782552316</td>
+            <td class="px-5 py-3.5"><span class="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-md">SMS</span></td>
+            <td class="px-5 py-3.5 text-gray-600">OTP Verification</td>
+            <td class="px-5 py-3.5 font-mono text-xs text-gray-400">msg_e5f6g7</td>
+          </tr>
+          <tr class="lrow log-entry" data-status="failed" data-channel="slack" data-q="slack otp alert failed">
+            <td class="px-5 py-3.5 font-mono text-xs text-gray-400">2025-02-23 09:08</td>
+            <td class="px-5 py-3.5"><span class="bg-rose-100 text-rose-700 text-xs px-2.5 py-1 rounded-full font-medium">Failed</span></td>
+            <td class="px-5 py-3.5 text-gray-700">#alerts</td>
+            <td class="px-5 py-3.5"><span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-md">Slack</span></td>
+            <td class="px-5 py-3.5 text-gray-600">OTP Alert</td>
+            <td class="px-5 py-3.5 font-mono text-xs text-gray-400">msg_i9j0k1</td>
+          </tr>
+          <tr class="lrow log-entry" data-status="server" data-channel="email" data-q="server error critical admin email">
+            <td class="px-5 py-3.5 font-mono text-xs text-gray-400">2025-02-23 08:22</td>
+            <td class="px-5 py-3.5"><span class="bg-red-100 text-red-700 text-xs px-2.5 py-1 rounded-full font-medium">Server Err</span></td>
+            <td class="px-5 py-3.5 text-gray-700">admin@notify.io</td>
+            <td class="px-5 py-3.5"><span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-md">Email</span></td>
+            <td class="px-5 py-3.5 text-gray-600">Server Alert</td>
+            <td class="px-5 py-3.5 font-mono text-xs text-gray-400">msg_m3n4o5</td>
+          </tr>
+          <tr class="lrow log-entry" data-status="sent" data-channel="email" data-q="john welcome email sent">
+            <td class="px-5 py-3.5 font-mono text-xs text-gray-400">2025-02-23 08:01</td>
+            <td class="px-5 py-3.5"><span class="bg-emerald-100 text-emerald-700 text-xs px-2.5 py-1 rounded-full font-medium">Sent</span></td>
+            <td class="px-5 py-3.5 text-gray-700">john@example.com</td>
+            <td class="px-5 py-3.5"><span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-md">Email</span></td>
+            <td class="px-5 py-3.5 text-gray-600">Welcome Email</td>
+            <td class="px-5 py-3.5 font-mono text-xs text-gray-400">msg_q7r8s9</td>
+          </tr>
+          <tr class="lrow log-entry" data-status="sent" data-channel="sms" data-q="250789 delivery sms sent">
+            <td class="px-5 py-3.5 font-mono text-xs text-gray-400">2025-02-23 07:48</td>
+            <td class="px-5 py-3.5"><span class="bg-emerald-100 text-emerald-700 text-xs px-2.5 py-1 rounded-full font-medium">Sent</span></td>
+            <td class="px-5 py-3.5 text-gray-700">+250789123456</td>
+            <td class="px-5 py-3.5"><span class="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-md">SMS</span></td>
+            <td class="px-5 py-3.5 text-gray-600">Delivery Confirm</td>
+            <td class="px-5 py-3.5 font-mono text-xs text-gray-400">msg_u1v2w3</td>
+          </tr>
+          <tr class="lrow log-entry" data-status="failed" data-channel="push" data-q="push promo failed device">
+            <td class="px-5 py-3.5 font-mono text-xs text-gray-400">2025-02-23 07:30</td>
+            <td class="px-5 py-3.5"><span class="bg-rose-100 text-rose-700 text-xs px-2.5 py-1 rounded-full font-medium">Failed</span></td>
+            <td class="px-5 py-3.5 text-gray-700">device_88abc</td>
+            <td class="px-5 py-3.5"><span class="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-md">Push</span></td>
+            <td class="px-5 py-3.5 text-gray-600">Promo Alert</td>
+            <td class="px-5 py-3.5 font-mono text-xs text-gray-400">msg_y5z6a7</td>
+          </tr>
+        </tbody>
+      </table>
+      <div id="log-empty" class="hidden px-5 py-10 text-center text-sm text-gray-400">No log entries match your filters.</div>
+      <div class="px-5 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
+        <span>Showing 7 of 2,489 entries</span>
+        <div class="flex items-center gap-1.5">
+          <button class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-100 transition-colors">← Prev</button>
+          <span class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg">1</span>
+          <button class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-100 transition-colors">2</button>
+          <button class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-100 transition-colors">Next →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE 4: TEMPLATES
+══════════════════════════════════════════════ -->
+<div id="page-templates" class="page bg-white fade-in">
+  <div class="border-b border-gray-200 px-10 py-6 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900 tracking-tight">TEMPLATES</h1>
+    <button onclick="toggleEditor()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">+ New Template</button>
+  </div>
+
+  <div class="p-8 space-y-6">
+    <!-- Editor (hidden by default) -->
+    <div id="tmpl-editor" class="hidden border border-indigo-200 bg-indigo-50 rounded-xl p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="font-bold text-gray-900">Create New Template</div>
+        <button onclick="toggleEditor()" class="text-gray-400 hover:text-gray-700 text-2xl leading-none font-light">×</button>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-medium text-gray-600 block mb-1">Template Name</label>
+          <input placeholder="e.g. Password Reset" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-400 text-gray-800"/>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600 block mb-1">Channel</label>
+          <select class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-400 text-gray-700 cursor-pointer">
+            <option>Email</option><option>SMS</option><option>Slack</option><option>Push</option>
+          </select>
+        </div>
+        <div class="col-span-2">
+          <label class="text-xs font-medium text-gray-600 block mb-1">Subject (Email)</label>
+          <input placeholder="Your account password was reset" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-400 text-gray-800"/>
+        </div>
+        <div class="col-span-2">
+          <label class="text-xs font-medium text-gray-600 block mb-1">Body — use {{variable}} for dynamic values</label>
+          <textarea rows="4" placeholder="Hello {{name}}, your request has been processed..." class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-400 text-gray-800 resize-none font-mono"></textarea>
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <button class="bg-indigo-600 text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors">Save Template</button>
+        <button class="border border-gray-300 text-gray-600 text-sm px-4 py-2.5 rounded-lg hover:bg-white transition-colors">Preview</button>
+      </div>
+    </div>
+
+    <!-- Template cards grid -->
+    <div class="grid grid-cols-2 gap-4">
+
+      <div class="tmpl border border-gray-200 rounded-xl p-5 bg-gray-50 cursor-pointer">
+        <div class="flex items-start justify-between mb-3">
+          <div>
+            <div class="font-bold text-gray-900">Password Reset</div>
+            <div class="text-xs text-gray-400 mt-0.5">Email · Last edited 2 days ago · Used 412×</div>
+          </div>
+          <span class="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium">Email</span>
+        </div>
+        <div class="bg-white border border-gray-100 rounded-lg px-3 py-2 text-xs font-mono text-gray-500 leading-relaxed">
+          Hello <span class="text-indigo-500">{{name}}</span>, a password reset was requested for your account...
+        </div>
+        <div class="flex items-center gap-3 mt-3">
+          <button class="text-xs text-gray-400 hover:text-indigo-600 transition-colors">Edit</button>
+          <button class="text-xs text-gray-400 hover:text-indigo-600 transition-colors">Duplicate</button>
+          <button class="text-xs text-gray-400 hover:text-rose-500 transition-colors ml-auto">Delete</button>
+        </div>
+      </div>
+
+      <div class="tmpl border border-gray-200 rounded-xl p-5 bg-gray-50 cursor-pointer">
+        <div class="flex items-start justify-between mb-3">
+          <div>
+            <div class="font-bold text-gray-900">OTP Verification</div>
+            <div class="text-xs text-gray-400 mt-0.5">SMS · Last edited 5 days ago · Used 1,892×</div>
+          </div>
+          <span class="bg-purple-100 text-purple-700 text-xs px-2.5 py-1 rounded-full font-medium">SMS</span>
+        </div>
+        <div class="bg-white border border-gray-100 rounded-lg px-3 py-2 text-xs font-mono text-gray-500 leading-relaxed">
+          Your OTP is <span class="text-indigo-500">{{otp}}</span>. Valid for 5 mins. Do not share.
+        </div>
+        <div class="flex items-center gap-3 mt-3">
+          <button class="text-xs text-gray-400 hover:text-indigo-600 transition-colors">Edit</button>
+          <button class="text-xs text-gray-400 hover:text-indigo-600 transition-colors">Duplicate</button>
+          <button class="text-xs text-gray-400 hover:text-rose-500 transition-colors ml-auto">Delete</button>
+        </div>
+      </div>
+
+      <div class="tmpl border border-gray-200 rounded-xl p-5 bg-gray-50 cursor-pointer">
+        <div class="flex items-start justify-between mb-3">
+          <div>
+            <div class="font-bold text-gray-900">Welcome Email</div>
+            <div class="text-xs text-gray-400 mt-0.5">Email · Last edited 1 week ago · Used 203×</div>
+          </div>
+          <span class="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium">Email</span>
+        </div>
+        <div class="bg-white border border-gray-100 rounded-lg px-3 py-2 text-xs font-mono text-gray-500 leading-relaxed">
+          Welcome to <span class="text-indigo-500">{{app_name}}</span>, <span class="text-indigo-500">{{name}}</span>! We're excited to have you...
+        </div>
+        <div class="flex items-center gap-3 mt-3">
+          <button class="text-xs text-gray-400 hover:text-indigo-600 transition-colors">Edit</button>
+          <button class="text-xs text-gray-400 hover:text-indigo-600 transition-colors">Duplicate</button>
+          <button class="text-xs text-gray-400 hover:text-rose-500 transition-colors ml-auto">Delete</button>
+        </div>
+      </div>
+
+      <div class="tmpl border border-gray-200 rounded-xl p-5 bg-gray-50 cursor-pointer">
+        <div class="flex items-start justify-between mb-3">
+          <div>
+            <div class="font-bold text-gray-900">Server Alert</div>
+            <div class="text-xs text-gray-400 mt-0.5">Slack · Last edited 3 days ago · Used 78×</div>
+          </div>
+          <span class="bg-indigo-100 text-indigo-700 text-xs px-2.5 py-1 rounded-full font-medium">Slack</span>
+        </div>
+        <div class="bg-white border border-gray-100 rounded-lg px-3 py-2 text-xs font-mono text-gray-500 leading-relaxed">
+          🚨 ALERT: <span class="text-indigo-500">{{server}}</span> is down. Error: <span class="text-indigo-500">{{error_code}}</span>
+        </div>
+        <div class="flex items-center gap-3 mt-3">
+          <button class="text-xs text-gray-400 hover:text-indigo-600 transition-colors">Edit</button>
+          <button class="text-xs text-gray-400 hover:text-indigo-600 transition-colors">Duplicate</button>
+          <button class="text-xs text-gray-400 hover:text-rose-500 transition-colors ml-auto">Delete</button>
+        </div>
+      </div>
+
+      <div class="tmpl border border-gray-200 rounded-xl p-5 bg-gray-50 cursor-pointer">
+        <div class="flex items-start justify-between mb-3">
+          <div>
+            <div class="font-bold text-gray-900">Order Shipped</div>
+            <div class="text-xs text-gray-400 mt-0.5">Email · Last edited 4 days ago · Used 340×</div>
+          </div>
+          <span class="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium">Email</span>
+        </div>
+        <div class="bg-white border border-gray-100 rounded-lg px-3 py-2 text-xs font-mono text-gray-500 leading-relaxed">
+          Your order <span class="text-indigo-500">{{order_id}}</span> has shipped! Track: <span class="text-indigo-500">{{tracking_url}}</span>
+        </div>
+        <div class="flex items-center gap-3 mt-3">
+          <button class="text-xs text-gray-400 hover:text-indigo-600 transition-colors">Edit</button>
+          <button class="text-xs text-gray-400 hover:text-indigo-600 transition-colors">Duplicate</button>
+          <button class="text-xs text-gray-400 hover:text-rose-500 transition-colors ml-auto">Delete</button>
+        </div>
+      </div>
+
+      <div class="tmpl border border-gray-200 rounded-xl p-5 bg-gray-50 cursor-pointer">
+        <div class="flex items-start justify-between mb-3">
+          <div>
+            <div class="font-bold text-gray-900">Promo Notification</div>
+            <div class="text-xs text-gray-400 mt-0.5">Push · Last edited 6 days ago · Used 95×</div>
+          </div>
+          <span class="bg-orange-100 text-orange-700 text-xs px-2.5 py-1 rounded-full font-medium">Push</span>
+        </div>
+        <div class="bg-white border border-gray-100 rounded-lg px-3 py-2 text-xs font-mono text-gray-500 leading-relaxed">
+          🎉 <span class="text-indigo-500">{{discount}}%</span> off today only! Use code <span class="text-indigo-500">{{promo_code}}</span>
+        </div>
+        <div class="flex items-center gap-3 mt-3">
+          <button class="text-xs text-gray-400 hover:text-indigo-600 transition-colors">Edit</button>
+          <button class="text-xs text-gray-400 hover:text-indigo-600 transition-colors">Duplicate</button>
+          <button class="text-xs text-gray-400 hover:text-rose-500 transition-colors ml-auto">Delete</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE 5: SUBSCRIBERS  (matches your screenshot)
+══════════════════════════════════════════════ -->
+<div id="page-subscribers" class="page bg-white fade-in">
+  <div class="border-b border-gray-200 px-10 py-6 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900 tracking-tight">MANAGE SUBSCRIBERS</h1>
+    <div class="flex items-center gap-3">
+      <button class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-4 py-2.5 rounded-lg transition-colors">Import CSV</button>
+      <button class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">+ Add Subscriber</button>
+    </div>
+  </div>
+
+  <div class="p-8 space-y-4">
+
+    <!-- Table (matching your screenshot exactly) -->
+    <div class="border-2 border-blue-400 rounded-xl overflow-hidden">
+
+      <!-- Table header row — matches screenshot blue border -->
+      <div class="bg-gray-200 grid grid-cols-3 items-center px-5 py-3 border-b border-gray-300">
+        <div class="text-xs font-bold text-gray-700 uppercase tracking-wider">NAME</div>
+        <div class="text-xs font-semibold text-gray-600">Status</div>
+        <div class="flex items-center justify-end gap-2">
+          <input id="sub-search" oninput="filterSubs()" placeholder="Search subscribers" class="bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-xs text-gray-700 placeholder-gray-400 focus:outline-none focus:border-blue-400 w-44"/>
+          <svg class="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+      </div>
+
+      <!-- Subscriber rows -->
+      <div id="sub-list" class="bg-gray-100 divide-y divide-gray-200">
+
+        <div class="srow sub-entry grid grid-cols-3 items-center px-5 py-5" data-q="jack active subscribed" data-sub="subscribed">
+          <span class="text-sm text-gray-800">Jack</span>
+          <span class="text-sm text-gray-600">Active</span>
+          <span class="text-sm text-gray-700 text-right">Subscribed</span>
+        </div>
+
+        <div class="srow sub-entry grid grid-cols-3 items-center px-5 py-5" data-q="john active subscribed" data-sub="subscribed">
+          <span class="text-sm text-gray-800">John</span>
+          <span class="text-sm text-gray-600">Active</span>
+          <span class="text-sm text-gray-700 text-right">Subscribed</span>
+        </div>
+
+        <div class="srow sub-entry grid grid-cols-3 items-center px-5 py-5" data-q="jimm active subscribed" data-sub="subscribed">
+          <span class="text-sm text-gray-800">Jimm</span>
+          <span class="text-sm text-gray-600">Active</span>
+          <span class="text-sm text-gray-700 text-right">Subscribed</span>
+        </div>
+
+        <div class="srow sub-entry grid grid-cols-3 items-center px-5 py-5" data-q="sami active unsubscribed" data-sub="unsubscribed">
+          <span class="text-sm text-gray-800">Sami</span>
+          <span class="text-sm text-gray-600">Active</span>
+          <span class="text-sm text-gray-700 text-right">Unsucribed</span>
+        </div>
+
+        <div class="srow sub-entry grid grid-cols-3 items-center px-5 py-5" data-q="alex morgan active subscribed" data-sub="subscribed">
+          <span class="text-sm text-gray-800">Alex Morgan</span>
+          <span class="text-sm text-gray-600">Active</span>
+          <span class="text-sm text-gray-700 text-right">Subscribed</span>
+        </div>
+
+        <div class="srow sub-entry grid grid-cols-3 items-center px-5 py-5" data-q="sarah active subscribed" data-sub="subscribed">
+          <span class="text-sm text-gray-800">Sarah</span>
+          <span class="text-sm text-gray-600">Active</span>
+          <span class="text-sm text-gray-700 text-right">Subscribed</span>
+        </div>
+
+        <div class="srow sub-entry grid grid-cols-3 items-center px-5 py-5" data-q="michael inactive unsubscribed" data-sub="unsubscribed">
+          <span class="text-sm text-gray-800">Michael</span>
+          <span class="text-sm text-gray-600">Inactive</span>
+          <span class="text-sm text-gray-700 text-right">Unsucribed</span>
+        </div>
+
+      </div>
+      <div id="sub-empty" class="hidden bg-gray-100 px-5 py-10 text-center text-sm text-gray-400">No subscribers found.</div>
+    </div>
+
+    <!-- Bottom count -->
+    <div class="flex items-center justify-between text-xs text-gray-500 px-1">
+      <span>7 subscribers total · 5 subscribed · 2 unsubscribed</span>
+      <select id="sub-filter" onchange="filterSubs()" class="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-600 focus:outline-none cursor-pointer">
+        <option value="">All subscribers</option>
+        <option value="subscribed">Subscribed only</option>
+        <option value="unsubscribed">Unsubscribed only</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    const page = document.getElementById('page-' + name);
+    page.classList.add('active');
+    const btn = document.querySelector(`[data-page="${name}"]`);
+    if (btn) btn.classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  function filterLogs() {
+    const q = (document.getElementById('log-search').value || '').toLowerCase();
+    const st = (document.getElementById('log-status').value || '').toLowerCase();
+    const ch = (document.getElementById('log-channel').value || '').toLowerCase();
+    let visible = 0;
+    document.querySelectorAll('.log-entry').forEach(row => {
+      const matchQ = !q || (row.dataset.q || '').toLowerCase().includes(q);
+      const matchS = !st || row.dataset.status === st;
+      const matchC = !ch || row.dataset.channel === ch;
+      if (matchQ && matchS && matchC) { row.style.display = ''; visible++; }
+      else row.style.display = 'none';
+    });
+    document.getElementById('log-empty').classList.toggle('hidden', visible > 0);
+  }
+
+  function filterSubs() {
+    const q = (document.getElementById('sub-search').value || '').toLowerCase();
+    const f = (document.getElementById('sub-filter') ? document.getElementById('sub-filter').value : '').toLowerCase();
+    let visible = 0;
+    document.querySelectorAll('.sub-entry').forEach(row => {
+      const matchQ = !q || (row.dataset.q || '').includes(q);
+      const matchF = !f || row.dataset.sub === f;
+      if (matchQ && matchF) { row.style.display = ''; visible++; }
+      else row.style.display = 'none';
+    });
+    document.getElementById('sub-empty').classList.toggle('hidden', visible > 0);
+  }
+
+  function toggleEditor() {
+    const el = document.getElementById('tmpl-editor');
+    el.classList.toggle('hidden');
+    if (!el.classList.contains('hidden')) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+</script>
+</body>
+</html>
