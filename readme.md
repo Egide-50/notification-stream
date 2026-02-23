@@ -1,10 +1,10 @@
 NotifyStream – Notification Management Dashboard
 
-NotifyStream is a modern notification management dashboard built with HTML, Tailwind CSS, and Vanilla JavaScript.
+NotifyStream is a modern notification management dashboard built with HTML, Tailwind CSS.
 It allows users to manage notification channels, templates, logs, and subscribers in a clean and interactive interface.
 
-🚀 Features
-📊 Overview
+ Features
+ Overview
 
 Live notification stream table
 
